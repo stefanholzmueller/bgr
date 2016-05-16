@@ -1,1 +1,1 @@
-# bgr
+# Board Game Recommender
