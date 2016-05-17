@@ -5,15 +5,17 @@ import scalikejdbc._
 object Importer {
 
   Class.forName("com.mysql.jdbc.Driver")
-  ConnectionPool.singleton("jdbc:mysql://localhost:3306/bgg20160516", "root", "root")
+  ConnectionPool.singleton("jdbc:mysql://localhost:3306/bgg20160518", "root", "root")
   implicit val session = AutoSession
 
   def main(args: Array[String]) {
     createTables
-    Crawler.crawlItems
-    Parser.parseItems
-    Crawler.crawlRatings
-    Parser.parseItemRatings
+    Crawler.crawlItems  // took 7 hours
+    Crawler.recrawlFailures
+//    Parser.parseItems  // a few minutes
+//    Crawler.crawlRatings  // 6 hours, with many failures
+//    Crawler.recrawlFailures
+//    Parser.parseItemRatings  // 1 hour?
   }
 
   def createTables = {

@@ -7,11 +7,9 @@ case class ItemRating(userName: String, itemId: Int, rating: Double)
 
 object Parser {
 
-//  Class.forName("com.mysql.jdbc.Driver")
-//  ConnectionPool.singleton("jdbc:mysql://localhost:3306/bgg20160516", "root", "root")
   implicit val session = AutoSession
 
-  def parseItemRatings { // took 1 hour
+  def parseItemRatings {
     sql"delete from itemrating".execute.apply()
 
     val userNameToUserId = scala.collection.mutable.Map[String, Int]()
