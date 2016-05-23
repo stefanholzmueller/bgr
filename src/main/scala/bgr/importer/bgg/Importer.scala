@@ -9,13 +9,14 @@ object Importer {
   implicit val session = AutoSession
 
   def main(args: Array[String]) {
-    createTables
-    Crawler.crawlItems  // took 7 hours
-    Crawler.recrawlFailures
-//    Parser.parseItems  // a few minutes
-//    Crawler.crawlRatings  // 6 hours, with many failures
+//    createTables
+//    Crawler.crawlItems  // 16:55 - 21:10 (batchsize 20)
 //    Crawler.recrawlFailures
-//    Parser.parseItemRatings  // 1 hour?
+//    Parser.parseItems  // 1 minute
+//    Crawler.crawlRatings  // 22:15 - 7:00 (pages 24+, batchsize 2), 7:05 - 10:15 (pages 23-, batchsize 8)
+    Crawler.recrawlFailures
+    Parser.parseItemRatings  // 47 min
+    println(new java.util.Date())
   }
 
   def createTables = {
@@ -44,7 +45,7 @@ object Importer {
     sql"""CREATE TABLE `itemrating` (
   `itemratingid` int(11) NOT NULL AUTO_INCREMENT,
   `username` varchar(100) DEFAULT NULL,
-  `userId` int(11) DEFAULT NULL,
+  `userid` int(11) DEFAULT NULL,
   `itemid` int(11) DEFAULT NULL,
   `rating` float DEFAULT NULL,
   `comment` text,

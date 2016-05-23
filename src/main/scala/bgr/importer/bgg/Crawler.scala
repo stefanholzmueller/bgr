@@ -4,8 +4,8 @@ import scalaj.http.Http
 import scalikejdbc._
 
 object Crawler {
-  val ID_BATCHES = 2000
-  val ID_BATCH_SIZE = 40
+  val ID_BATCHES = 100000
+  val ID_BATCH_SIZE = 2
   val ID_START = 1
 
   implicit val session = AutoSession
@@ -26,7 +26,7 @@ object Crawler {
 
   def optimizePaging = {
     type ItemId = Int
-    val list = sql"SELECT itemId, ratingsCount FROM item WHERE type = 'boardgame' AND ratingsCount > 100".map { wrs =>
+    val list = sql"SELECT itemId, ratingsCount FROM item WHERE ratingsCount > 100".map { wrs =>
       (wrs.get("ratingsCount"): Int, wrs.get("itemId"): ItemId)
     }.list.apply()
     val pageCountToIds = list.map {
@@ -44,7 +44,7 @@ object Crawler {
   }
 
   def recrawlFailures = {
-    val idsAndUrls = sql"SELECT id, url FROM raw WHERE status != 200".map { wrs =>
+    val idsAndUrls = sql"SELECT id, url FROM raw WHERE status != 200 OR body = ''".map { wrs =>
       (wrs.get("id"): Int, wrs.get("url"): String)
     }.list.apply().toSet[(Int, String)] // randomize
     idsAndUrls.foreach {

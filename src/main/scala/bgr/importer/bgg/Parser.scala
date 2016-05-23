@@ -15,29 +15,27 @@ object Parser {
     val userNameToUserId = scala.collection.mutable.Map[String, Int]()
     var runningUserId = 0
 
-    val ids = sql"SELECT id FROM raw".map(_.get("id"):Int).list.apply
+    val ids = sql"SELECT id FROM raw".map(_.get("id"): Int).list.apply
     ids.foreach { id =>
-    val xmls = sql"select body from raw where status = '200' AND id = $id".fetchSize(1).foreach { row =>
-      println(s"id=$id  runningUserId=$runningUserId")
-      val xml = row.string("body")
-      val xmlElem = scala.xml.XML.loadString(fixXml(xml))
-      val items = (xmlElem \ "item").filter { item =>
-        (item \ "@type").text == "boardgame" 
-      }  // necessary?
-      items.foreach { item =>
-        val itemId = (item \ "@id").text.toInt
-        val itemRatings = (item \ "comments" \ "comment").map { commentNode =>
-          val userName = (commentNode \ "@username").text
-          val rating = (commentNode \ "@rating").text.toDouble
-          val comment = (commentNode \ "@value").text
+      val xmls = sql"select body from raw where status = '200' AND id = $id".fetchSize(1).foreach { row =>
+        println(s"id=$id  runningUserId=$runningUserId")
+        val xml = row.string("body")
+        val xmlElem = scala.xml.XML.loadString(fixXml(xml))
+        val items = (xmlElem \ "item")
+        items.foreach { item =>
+          val itemId = (item \ "@id").text.toInt
+          val itemRatings = (item \ "comments" \ "comment").map { commentNode =>
+            val userName = (commentNode \ "@username").text
+            val rating = (commentNode \ "@rating").text.toDouble
+            val comment = (commentNode \ "@value").text
 
-          val userId = userNameToUserId.getOrElseUpdate(userName, {runningUserId = runningUserId + 1; runningUserId})
+            val userId = userNameToUserId.getOrElseUpdate(userName, { runningUserId = runningUserId + 1; runningUserId })
 
-          sql"""INSERT INTO itemrating (userName, userId, itemId, rating, comment)
+            sql"""INSERT INTO itemrating (userName, userId, itemId, rating, comment)
                 VALUES ($userName, $userId, $itemId, $rating, $comment)""".update.apply
+          }
         }
       }
-    }
     }
   }
 
