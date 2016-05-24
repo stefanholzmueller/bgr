@@ -2,7 +2,7 @@ package bgr.importer.bgg
 
 import scalikejdbc._
 
-case class Item(itemId: Int, itemType: String, itemName: String, yearpublished: String, image: String, thumbnail: String, ratingsCount: Int)
+case class Item(itemId: Int, itemType: String, itemName: String, yearpublished: String, image: String, thumbnail: String, ratingsCount: Int, usersRated: Int)
 case class ItemRating(userName: String, itemId: Int, rating: Double)
 
 object Parser {
@@ -54,9 +54,9 @@ object Parser {
     val xmls = sql"select body from raw where status = '200'".foreach { row =>
       val items = parseItemXml(row.string("body"))
       items foreach {
-        case Item(itemId, itemType, itemName, yearpublished, image, thumbnail, ratingsCount) =>
-          sql"""insert into item (itemId, type, name, yearpublished, image, thumbnail, ratingsCount) 
-                values (${itemId}, ${itemType}, ${itemName}, ${yearpublished}, ${image}, ${thumbnail}, ${ratingsCount})""".update.apply()
+        case Item(itemId, itemType, itemName, yearpublished, image, thumbnail, ratingsCount, usersRated) =>
+          sql"""insert into item (itemId, type, name, yearpublished, image, thumbnail, ratingsCount, usersRated) 
+                values (${itemId}, ${itemType}, ${itemName}, ${yearpublished}, ${image}, ${thumbnail}, ${ratingsCount}, ${usersRated})""".update.apply()
       }
     }
   }
@@ -76,7 +76,8 @@ object Parser {
         val thumbnail = (item \ "thumbnail").text
         val totalitems = (item \ "comments" \ "@totalitems").text
         val ratingsCount = if (totalitems.isEmpty) 0 else totalitems.toInt
-        Item(itemId, itemType, itemName, yearpublished, image, thumbnail, ratingsCount)
+        val usersRated = (item \ "statistics" \ "ratings" \ "usersrated").text.toInt
+        Item(itemId, itemType, itemName, yearpublished, image, thumbnail, ratingsCount, usersRated)
       }
       items
     } catch {
