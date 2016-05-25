@@ -17,7 +17,7 @@ object Importer {
     //    Crawler.recrawlFailures
     //    Parser.parseItemRatings  // 47 min
     //    println(new java.util.Date())
-    filterForPopularity(100, 10) // 6 min
+    filterForPopularity(50, 10) // 1 min
   }
 
   def filterForPopularity(ratingsCount: Int, timesVoted: Int) = {
@@ -25,11 +25,10 @@ object Importer {
     val tableNameSQL = SQLSyntax.createUnsafely(tableName)
     createTableForRatings(tableName)
     sql"""INSERT INTO ${tableNameSQL}
-SELECT itemrating.*
-FROM itemrating INNER JOIN item ON itemrating.itemid = item.itemid
-WHERE item.ratingscount >= ${ratingsCount} AND itemrating.userId IN
- (SELECT userId FROM itemrating GROUP BY userId HAVING COUNT(userId) >= ${timesVoted})
-GROUP BY itemrating.userid, itemrating.itemid, itemrating.rating;""".execute.apply() // TODO usersRated instead of ratingsCount
+SELECT *
+FROM itemrating
+WHERE itemid IN (SELECT itemid FROM itemrating GROUP BY itemid HAVING COUNT(itemid) >= ${ratingsCount})
+  AND userid IN (SELECT userid FROM itemrating GROUP BY userid HAVING COUNT(userid) >= ${timesVoted})""".execute.apply() // TODO usersRated instead of ratingsCount
   }
 
   def createTables = {
