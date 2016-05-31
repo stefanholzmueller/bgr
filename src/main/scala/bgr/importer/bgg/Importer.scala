@@ -1,5 +1,6 @@
 package bgr.importer.bgg
 
+import scalaj.http.Http
 import scalikejdbc._
 
 object Importer {
@@ -7,6 +8,9 @@ object Importer {
   Class.forName("com.mysql.jdbc.Driver")
   ConnectionPool.singleton("jdbc:mysql://localhost:3306/bgg20160518", "root", "root")
   implicit val session = AutoSession
+
+  val pioUrl = "http://ec2-52-40-41-67.us-west-2.compute.amazonaws.com:7070"
+  val pioAccessKey = "pM2t5ejIDsPkmBOvKSpKt3rM5wYq-DmmAQn2SEOUV3rgrujb13UGfAgqwWpOeE9n"
 
   def main(args: Array[String]) {
     //    createTables
@@ -17,7 +21,25 @@ object Importer {
     //    Crawler.recrawlFailures
     //    Parser.parseItemRatings  // 47 min
     //    println(new java.util.Date())
-    filterForPopularity(50, 10) // 1 min
+    //    filterForPopularity(50, 10) // 1 min
+    uploadToPIO
+  }
+
+  def uploadToPIO() = {
+    val itemratings = sql"SELECT itemratingid, userName, itemId, rating FROM itemrating LIMIT 50"
+    val json = itemratings.map { row =>
+      val userName = row.string("userName")
+      val itemId = row.string("itemId")
+      val rating = row.float("rating")
+
+      s"""{"event":"rate","entityType":"user","entityId":"$userName","targetEntityType":"item","targetEntityId":"$itemId","properties":{"rating":$rating}}"""
+    }.toList().apply().mkString("[", ",", "]")
+
+    val url = pioUrl + "/batch/events.json?accessKey=" + pioAccessKey
+    val response = Http(url).method("POST").header("Content-Type", "application/json").postData(json).execute()
+    if (response.code != 200) {
+      println("failed upload: url=" + url + ", payload=" + json)
+    }
   }
 
   def filterForPopularity(ratingsCount: Int, timesVoted: Int) = {
