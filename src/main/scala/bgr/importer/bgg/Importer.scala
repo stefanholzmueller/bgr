@@ -9,8 +9,8 @@ object Importer {
   ConnectionPool.singleton("jdbc:mysql://localhost:3306/bgg20160518", "root", "root")
   implicit val session = AutoSession
 
-  val pioUrl = "http://ec2-52-40-41-67.us-west-2.compute.amazonaws.com:7070"
-  val pioAccessKey = "pM2t5ejIDsPkmBOvKSpKt3rM5wYq-DmmAQn2SEOUV3rgrujb13UGfAgqwWpOeE9n"
+    val pioUrl = "http://192.168.178.38:7070"
+    val pioAccessKey = "RihaFc2gCm3Fe2pa_2xNPvo4paiO-xzkRbMEutByjr_x1hPRdpvXsTGUyLzD2JD3"
 
   def main(args: Array[String]) {
     //    createTables
@@ -20,25 +20,36 @@ object Importer {
     //    Crawler.crawlRatings  // 22:15 - 7:00 (pages 24+, batchsize 2), 7:05 - 10:15 (pages 23-, batchsize 8)
     //    Crawler.recrawlFailures
     //    Parser.parseItemRatings  // 47 min
-    //    println(new java.util.Date())
     //    filterForPopularity(50, 10) // 1 min
-    uploadToPIO
+    uploadToPIO // ~3h (local vm)
+    println(new java.util.Date())
   }
 
   def uploadToPIO() = {
-    val itemratings = sql"SELECT itemratingid, userName, itemId, rating FROM itemrating LIMIT 50"
-    val json = itemratings.map { row =>
+    var list: List[String] = List()
+    var count: Int = 0
+
+    val itemratings = sql"SELECT itemratingid, userName, itemId, rating FROM itemrating_50_10"
+    val ratings = itemratings.foreach { row =>
       val userName = row.string("userName")
       val itemId = row.string("itemId")
       val rating = row.float("rating")
 
-      s"""{"event":"rate","entityType":"user","entityId":"$userName","targetEntityType":"item","targetEntityId":"$itemId","properties":{"rating":$rating}}"""
-    }.toList().apply().mkString("[", ",", "]")
+      val event: String = s"""{"event":"rate","entityType":"user","entityId":"$userName","targetEntityType":"item","targetEntityId":"$itemId","properties":{"rating":$rating}}"""
+      list = event :: list
+      if (list.size == 50) {
+        val json = list.mkString("[", ",", "]")
+        list = List()
 
-    val url = pioUrl + "/batch/events.json?accessKey=" + pioAccessKey
-    val response = Http(url).method("POST").header("Content-Type", "application/json").postData(json).execute()
-    if (response.code != 200) {
-      println("failed upload: url=" + url + ", payload=" + json)
+        val url = pioUrl + "/batch/events.json?accessKey=" + pioAccessKey
+        val response = Http(url).method("POST").header("Content-Type", "application/json").postData(json).execute()
+        if (response.code == 200) {
+        	count += 50
+          println(s"uploaded $count events: $json")
+        } else {
+          println("failed upload: url=" + url + ", payload=" + json)
+        }
+      }
     }
   }
 
